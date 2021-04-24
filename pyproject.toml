@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "bb"
+version = "0.1.0"
+description = "Bitbucket's command line tool"
+authors = ["Paul Nameless <reacsdas@gmail.com>"]
+license = "Unlicense"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+typer = "^0.3.2"
+humanize = "^3.4.1"
+dateutils = "^0.6.12"
+requests = "^2.25.1"
+rich = "^10.1.0"
+
+[tool.poetry.dev-dependencies]
+black = "20.8b1"
+
+[tool.poetry.scripts]
+tg = "main:app"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 79
+
+[tool.isort]
+line_length = 79
+multi_line_output = 3
+include_trailing_comma = true
