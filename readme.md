@@ -18,7 +18,7 @@ At the moment the only way it works is by `App passwords` auth: [https://bitbuck
 
 > For this you need to have 2FA enabled
 
-At first launch, `bb` will ask for user and password that you generated at bitbucket and write to `~/.config/bb/conf.py`. That's plain python file and you can use it to store information securely and add config to dots config:
+At first launch, `bb` will ask for user and password that you generated at bitbucket and write to `~/.config/bb/conf.py`. That's plain python file and you can use it to store information securely:
 
 ```python
 import os
