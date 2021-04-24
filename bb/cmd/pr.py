@@ -14,6 +14,7 @@ from bb.utils import (
     get_workspace,
     handle_error,
     post,
+    run_cmd,
 )
 from dateutil.parser import parse
 from rich import box
@@ -147,7 +148,7 @@ def merge(
     )
     resp = post(url)
     handle_error(resp)
-    print(resp["state"])
+    print(resp["state"].title())
 
 
 @app.command()
@@ -220,4 +221,4 @@ def approve(
     with console.status("[bold green]Loading...") as status:
         resp = post(url)
     handle_error(resp)
-    print(reps["state"])
+    print(resp["state"].title())
