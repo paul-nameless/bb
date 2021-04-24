@@ -1,12 +1,5 @@
-"""
-b pr list
-b pr create
-b pr merge
-b pr info #12
-"""
-from cmd import pr, repo
-
 import typer
+from bb.cmd import pr, repo
 
 app = typer.Typer()
 

@@ -3,13 +3,12 @@ import os
 import subprocess
 from functools import lru_cache
 
-import config
 import requests
+from bb import config
 from rich.console import Console
 from rich.syntax import Syntax
 
 
-# cache for 5 secs
 def get(url, query: dict = None):
     return requests.get(url, auth=config.AUTH, params=query).json()
 

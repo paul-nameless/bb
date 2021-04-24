@@ -2,15 +2,10 @@ import json
 from enum import Enum, auto
 from typing import List
 
-import config
 import humanize
 import typer
-from dateutil.parser import parse
-from rich import box
-from rich.console import Console
-from rich.syntax import Syntax
-from rich.table import Table
-from utils import (
+from bb import config
+from bb.utils import (
     get,
     get_current_branch,
     get_last_commit_msg,
@@ -20,6 +15,11 @@ from utils import (
     handle_error,
     post,
 )
+from dateutil.parser import parse
+from rich import box
+from rich.console import Console
+from rich.syntax import Syntax
+from rich.table import Table
 
 app = typer.Typer()
 prs_url = "https://api.bitbucket.org/2.0/repositories/{workspace}/{slug}/pullrequests"

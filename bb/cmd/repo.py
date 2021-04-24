@@ -1,5 +1,5 @@
 import typer
-from utils import get
+from bb.utils import get
 
 app = typer.Typer()
 
