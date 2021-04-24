@@ -54,7 +54,7 @@ def list(
     console.print(table)
 
 
-def generate_prs_table(prs: List[dict], extra: bool = False):
+def generate_prs_table(prs: List[dict], extra: bool = False) -> Table:
     table = Table(box=box.SIMPLE)
 
     columns = [
@@ -63,7 +63,6 @@ def generate_prs_table(prs: List[dict], extra: bool = False):
         "Branch",
         "Created",
         "Updated",
-        "State",
         "Author",
     ]
     if extra:
@@ -76,27 +75,26 @@ def generate_prs_table(prs: List[dict], extra: bool = False):
         updated = humanize.naturaldate(parse(pr["updated_on"]))
         branch = f'{pr["source"]["branch"]["name"]}->{pr["destination"]["branch"]["name"]}'
 
+        title = pr["title"] if len(pr["title"]) <= 32 else f"{pr['title'][:29]}..."
         row = [
             str(pr["id"]),
-            pr["title"],
+            title,
             branch,
             created,
             updated,
-            pr["state"],
             pr["author"]["display_name"],
         ]
         if extra:
             build_status_resp = get(pr["links"]["statuses"]["href"])
             build_status = ",".join(
-                (it["state"] for it in build_status_resp["values"])
+                (f'[red]it["state"]' if "fail" in it["state"] else f'[green]{it["state"]}' for it in build_status_resp["values"])
             )
 
             approve_resp = get(pr["links"]["self"]["href"])
-            # print(pr["links"]["self"]["href"])
-            # print([it["state"] for it in approve_resp["participants"]])
             approve = ",".join(
                 (it["user"]["display_name"] for it in approve_resp["participants"] if it["approved"])
             )
+            approve = f"[green]{approve}"
 
             row.extend([build_status, approve])
         table.add_row(*row)
