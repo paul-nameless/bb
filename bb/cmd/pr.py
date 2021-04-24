@@ -21,7 +21,7 @@ from rich.console import Console
 from rich.syntax import Syntax
 from rich.table import Table
 
-app = typer.Typer()
+app = typer.Typer(help="Manage pull requests")
 prs_url = "https://api.bitbucket.org/2.0/repositories/{workspace}/{slug}/pullrequests"
 merge_url = "https://api.bitbucket.org/2.0/repositories/{workspace}/{slug}/pullrequests/{id}/merge"
 diff_url = "https://api.bitbucket.org/2.0/repositories/{workspace}/{slug}/pullrequests/{id}/diff"
@@ -45,6 +45,7 @@ def list(
     slug: str = get_slug(),
     state: State = State.OPEN,
 ):
+    """List all PRs"""
     console = Console()
     with console.status("[bold green]Loading...") as status:
         response = get(
@@ -113,6 +114,7 @@ def create(
     body: str = None,
     close: bool = True,
 ):
+    """Create new PR"""
     data = {"title": title, "source": {"branch": {"name": src_branch}}, "close_source_branch": close}
     if dst_branch:
         data["destination"] = {"branch": {"name": dst_branch}}
@@ -123,6 +125,7 @@ def create(
 
     console = Console()
     with console.status("[bold green]Loading...") as status:
+        run_cmd(["git", "push", "origin", src_branch])
         resp = post(prs_url.format(workspace=workspace, slug=slug), data)
         handle_error(resp)
 
@@ -138,6 +141,7 @@ def merge(
     workspace: str = get_workspace(),
     slug: str = get_slug(),
 ):
+    """Merge PR by ID"""
     url = merge_url.format(
         workspace=workspace, slug=slug, id=id
     )
@@ -152,6 +156,8 @@ def status(
     slug: str = get_slug(),
     state: State = State.OPEN,
 ):
+    """Shows more detailed information about PRs (Build, Approved)
+    but slower than <bb pr list>"""
     console = Console()
     with console.status("[bold green]Loading...") as status:
         response = get(
@@ -167,6 +173,7 @@ def diff(
     workspace: str = get_workspace(),
     slug: str = get_slug(),
 ):
+    """Show diff by PR ID"""
     url = diff_url.format(
         workspace=workspace,
         slug=slug,
@@ -187,6 +194,7 @@ def checkout(
     workspace: str = get_workspace(),
     slug: str = get_slug(),
 ):
+    """Checkout PR by ID"""
     url = pr_url.format(
         workspace=workspace, slug=slug, id=id
     )
@@ -204,6 +212,7 @@ def approve(
     workspace: str = get_workspace(),
     slug: str = get_slug(),
 ):
+    """Approve PR by ID"""
     url = approve_url.format(
         workspace=workspace, slug=slug, id=id
     )

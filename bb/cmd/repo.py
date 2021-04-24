@@ -4,7 +4,7 @@ from rich import box
 from rich.console import Console
 from rich.table import Table
 
-app = typer.Typer()
+app = typer.Typer(help="Get repo information")
 
 repo_url = "https://api.bitbucket.org/2.0/repositories/{workspace}"
 
@@ -13,6 +13,9 @@ repo_url = "https://api.bitbucket.org/2.0/repositories/{workspace}"
 def list(
     workspace: str = get_workspace(),
 ):
+    """
+    List repositories in current workspace
+    """
     console = Console()
     with console.status("[bold green]Loading...") as status:
         resp = get(repo_url.format(workspace=workspace))
