@@ -2,6 +2,8 @@
 
 Bitbucket's command line tool
 
+> It's like `gh` ([GitHub's CLI](https://github.com/cli/cli)) but for BitBucket
+
 This tools is very basic but it does all what I need at the moment (though I am happy to accept PRs)
 
 ![bb screenshot](screenshot.png)
