@@ -2,7 +2,6 @@ import json
 from enum import Enum, auto
 from typing import List
 
-import humanize
 import typer
 from bb import config
 from bb.utils import (
@@ -13,21 +12,29 @@ from bb.utils import (
     get_text,
     get_workspace,
     handle_error,
+    parse_dt,
     post,
+    pp,
     run_cmd,
 )
 from dateutil.parser import parse
 from rich import box
 from rich.console import Console
+from rich.markdown import Markdown
+from rich.padding import Padding
 from rich.syntax import Syntax
 from rich.table import Table
 
 app = typer.Typer(help="Manage pull requests")
 prs_url = "https://api.bitbucket.org/2.0/repositories/{workspace}/{slug}/pullrequests"
-merge_url = "https://api.bitbucket.org/2.0/repositories/{workspace}/{slug}/pullrequests/{id}/merge"
-diff_url = "https://api.bitbucket.org/2.0/repositories/{workspace}/{slug}/pullrequests/{id}/diff"
-pr_url = "https://api.bitbucket.org/2.0/repositories/{workspace}/{slug}/pullrequests/{id}"
-approve_url = "https://api.bitbucket.org/2.0/repositories/{workspace}/{slug}/pullrequests/{id}/approve"
+merge_url = f"{prs_url}/{{id}}/merge"
+diff_url = f"{prs_url}/{{id}}/diff"
+pr_url = f"{prs_url}/{{id}}"
+approve_url = f"{prs_url}/{{id}}/approve"
+decline_url = f"{prs_url}/{{id}}/decline"
+request_changes_url = f"{prs_url}/{{id}}/request-changes"
+comments_url = f"{prs_url}/{{id}}/comments"
+commits_url = f"{prs_url}/{{id}}/commits"
 
 
 class State(str, Enum):
@@ -73,8 +80,8 @@ def generate_prs_table(prs: List[dict], extra: bool = False) -> Table:
         table.add_column(column, justify="left", style="cyan", no_wrap=True)
 
     for pr in prs:
-        created = humanize.naturaldate(parse(pr["created_on"]))
-        updated = humanize.naturaldate(parse(pr["updated_on"]))
+        created = parse_dt(pr["created_on"])
+        updated = parse_dt(pr["updated_on"])
         branch = f'{pr["source"]["branch"]["name"]}->{pr["destination"]["branch"]["name"]}'
 
         title = pr["title"] if len(pr["title"]) <= 32 else f"{pr['title'][:29]}..."
@@ -141,6 +148,7 @@ def merge(
     id: str,
     workspace: str = get_workspace(),
     slug: str = get_slug(),
+    delete_branch: bool = True,
 ):
     """Merge PR by ID"""
     url = merge_url.format(
@@ -149,6 +157,12 @@ def merge(
     resp = post(url)
     handle_error(resp)
     print(resp["state"].title())
+    if delete_branch:
+        dst_branch = resp["destination"]["branch"]["name"]
+        run_cmd(["git", "checkout", dst_branch])
+        src_branch = resp["source"]["branch"]["name"]
+        run_cmd(["git", "branch", "-D", src_branch])
+
 
 
 @app.command()
@@ -164,6 +178,7 @@ def status(
         response = get(
             prs_url.format(workspace=workspace, slug=slug), {"state": state}
         )
+        # TODO: show number of comments
         table = generate_prs_table(response["values"], extra=True)
     console.print(table)
 
@@ -222,3 +237,92 @@ def approve(
         resp = post(url)
     handle_error(resp)
     print(resp["state"].title())
+
+
+@app.command()
+def decline(
+    id: str,
+    workspace: str = get_workspace(),
+    slug: str = get_slug(),
+):
+    """Decline PR by ID"""
+    url = decline_url.format(
+        workspace=workspace, slug=slug, id=id
+    )
+    console = Console()
+    with console.status("[bold green]Loading...") as status:
+        resp = post(url)
+    handle_error(resp)
+    print(resp["state"].title())
+
+
+@app.command()
+def request_changes(
+    id: str,
+    workspace: str = get_workspace(),
+    slug: str = get_slug(),
+):
+    """Request changes for PR by ID"""
+    url = request_changes_url.format(
+        workspace=workspace, slug=slug, id=id
+    )
+    console = Console()
+    with console.status("[bold green]Loading...") as status:
+        resp = post(url)
+    handle_error(resp)
+    print(resp["state"].title())
+
+
+@app.command()
+def comments(
+    id: str,
+    workspace: str = get_workspace(),
+    slug: str = get_slug(),
+):
+    """View comments for PR by ID"""
+    url = comments_url.format(
+        workspace=workspace, slug=slug, id=id
+    )
+    console = Console()
+    with console.status("[bold green]Loading...") as status:
+        resp = get(url)
+        handle_error(resp)
+
+    for comment in resp["values"]:
+        user = comment["user"]["display_name"]
+        updated = parse_dt(comment["updated_on"])
+        path = comment["inline"]["path"]
+        # _from = comment["inline"]["from"] or ""
+        to = comment["inline"]["to"] or ""
+        line = f":{to}" if to else ""
+        deleted = "(Deleted)" if comment["deleted"] else ""
+        console.print(f"[bold]{user}[/bold] {path}{line} [dim]{updated}[/dim] {deleted}")
+        markdown = comment["content"]["raw"]
+        console.print(Padding(Markdown(markdown, code_theme=config.THEME), 1))
+
+
+@app.command()
+def commits(
+    id: str,
+    workspace: str = get_workspace(),
+    slug: str = get_slug(),
+):
+    """View commits of PR by ID"""
+    url = commits_url.format(
+        workspace=workspace, slug=slug, id=id
+    )
+    console = Console()
+    with console.status("[bold green]Loading...") as status:
+        resp = get(url)
+        handle_error(resp)
+
+    for commit in resp["values"]:
+        hash = commit["hash"]
+        author = commit["author"]["raw"]
+        date = commit["date"]
+        message = commit["message"]
+
+        console.print(f"[bold]commit {hash}[/bold]")
+        console.print(f"[cyan]Author: {author}")
+        console.print(f"[cyan]Date: {date}")
+        console.print(Padding(message.strip(), (1, 4)))

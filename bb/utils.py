@@ -3,8 +3,11 @@ import os
 import subprocess
 from functools import lru_cache
 
+import humanize
 import requests
 from bb import config
+from dateutil.parser import parse
+from dateutil.tz import tzlocal
 from rich.console import Console
 from rich.syntax import Syntax
 
@@ -37,9 +40,11 @@ def run_cmd(cmd: list):
         cmd,
         cwd=os.getenv("PWD"),
         stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
     if proc.returncode != 0:
-        # raise Exception("Error calling git")
+        print(f"{cmd} exited with {proc.returncode} code")
+        print(proc.stderr.decode())
         exit(1)
     return proc.stdout.decode().strip()
 
@@ -78,3 +83,9 @@ def pp(d: dict):
     )
     console = Console()
     console.print(syntax)
+
+
+def parse_dt(dt) -> str:
+    dt = parse(dt)
+    dt = dt.astimezone(tzlocal()).replace(tzinfo=None)
+    return humanize.naturaltime(dt)
