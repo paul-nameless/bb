@@ -35,7 +35,7 @@ AUTH = (user, pswd)
 
 ```sh
 > bb pr --help
-Usage: main.py pr [OPTIONS] COMMAND [ARGS]...
+Usage: bb pr [OPTIONS] COMMAND [ARGS]...
 
   Manage pull requests
 
@@ -43,13 +43,17 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  approve   Approve PR by ID
-  checkout  Checkout PR by ID
-  create    Create new PR
-  diff      Show diff by PR ID
-  list      List all PRs
-  merge     Merge PR by ID
-  status    Shows more detailed information about PRs (Build, Approved) but...
+  approve          Approve PR by ID
+  checkout         Checkout PR by ID
+  comments         View comments for PR by ID
+  commits          View commits of PR by ID
+  create           Create new PR
+  decline          Decline PR by ID
+  diff             Show diff by PR ID
+  list             List all PRs
+  merge            Merge PR by ID
+  request-changes  Request changes for PR by ID
+  status           Shows more detailed information about PRs (Build,...
 ```
 
 ## Example
