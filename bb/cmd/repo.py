@@ -17,7 +17,7 @@ def list(
     List repositories in current workspace
     """
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = get(repo_url.format(workspace=workspace))
         table = generate_repo_table(resp["values"])
     console.print(table)
@@ -25,11 +25,7 @@ def list(
 
 def generate_repo_table(repos) -> Table:
     table = Table(box=box.SIMPLE)
-    columns = [
-        "Project",
-        "Slug",
-        "Owner"
-    ]
+    columns = ["Project", "Slug", "Owner"]
     for column in columns:
         table.add_column(column, justify="left", style="cyan", no_wrap=True)
 

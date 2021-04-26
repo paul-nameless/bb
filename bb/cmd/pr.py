@@ -1,4 +1,3 @@
-import json
 from enum import Enum, auto
 from typing import List
 
@@ -14,10 +13,8 @@ from bb.utils import (
     handle_error,
     parse_dt,
     post,
-    pp,
     run_cmd,
 )
-from dateutil.parser import parse
 from rich import box
 from rich.console import Console
 from rich.markdown import Markdown
@@ -55,7 +52,7 @@ def list(
 ):
     """List all PRs"""
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         response = get(
             prs_url.format(workspace=workspace, slug=slug), {"state": state}
         )
@@ -77,14 +74,25 @@ def generate_prs_table(prs: List[dict], extra: bool = False) -> Table:
     if extra:
         columns.extend(["Build", "Approved"])
     for column in columns:
-        table.add_column(column, justify="left", style="cyan", no_wrap=True)
+        no_wrap = True
+        overflow = "fold"
+        if column == "Title":
+            overflow = "ellipsis"
+            no_wrap = False
+        table.add_column(
+            column,
+            justify="left",
+            style="cyan",
+            no_wrap=no_wrap,
+            overflow=overflow,
+        )
 
     for pr in prs:
         created = parse_dt(pr["created_on"])
         updated = parse_dt(pr["updated_on"])
         branch = f'{pr["source"]["branch"]["name"]}->{pr["destination"]["branch"]["name"]}'
 
-        title = pr["title"] if len(pr["title"]) <= 32 else f"{pr['title'][:29]}..."
+        title = pr["title"]
         row = [
             str(pr["id"]),
             title,
@@ -96,19 +104,27 @@ def generate_prs_table(prs: List[dict], extra: bool = False) -> Table:
         if extra:
             build_status_resp = get(pr["links"]["statuses"]["href"])
             build_status = ",".join(
-                (f'[red]it["state"]' if "fail" in it["state"] else f'[green]{it["state"]}' for it in build_status_resp["values"])
+                (
+                    f'[red]{it["state"]}[/red]'
+                    if "fail" in it["state"].lower()
+                    else f'[green]{it["state"]}[/green]'
+                    for it in build_status_resp["values"]
+                )
             )
 
             approve_resp = get(pr["links"]["self"]["href"])
             approve = ",".join(
-                (it["user"]["display_name"] for it in approve_resp["participants"] if it["approved"])
+                (
+                    it["user"]["display_name"]
+                    for it in approve_resp["participants"]
+                    if it["approved"]
+                )
             )
             approve = f"[green]{approve}"
 
             row.extend([build_status, approve])
         table.add_row(*row)
     return table
-
 
 
 @app.command()
@@ -123,7 +139,11 @@ def create(
     close: bool = True,
 ):
     """Create new PR"""
-    data = {"title": title, "source": {"branch": {"name": src_branch}}, "close_source_branch": close}
+    data = {
+        "title": title,
+        "source": {"branch": {"name": src_branch}},
+        "close_source_branch": close,
+    }
     if dst_branch:
         data["destination"] = {"branch": {"name": dst_branch}}
     if reviewers:
@@ -132,7 +152,7 @@ def create(
         data["description"] = body
 
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         run_cmd(["git", "push", "origin", src_branch])
         resp = post(prs_url.format(workspace=workspace, slug=slug), data)
         handle_error(resp)
@@ -140,7 +160,6 @@ def create(
         table = generate_prs_table([resp])
     console.print(table)
     print(resp["links"]["html"]["href"])
-
 
 
 @app.command()
@@ -151,9 +170,7 @@ def merge(
     delete_branch: bool = True,
 ):
     """Merge PR by ID"""
-    url = merge_url.format(
-        workspace=workspace, slug=slug, id=id
-    )
+    url = merge_url.format(workspace=workspace, slug=slug, id=id)
     resp = post(url)
     handle_error(resp)
     print(resp["state"].title())
@@ -162,7 +179,6 @@ def merge(
         run_cmd(["git", "checkout", dst_branch])
         src_branch = resp["source"]["branch"]["name"]
         run_cmd(["git", "branch", "-D", src_branch])
-
 
 
 @app.command()
@@ -174,7 +190,7 @@ def status(
     """Shows more detailed information about PRs (Build, Approved)
     but slower than <bb pr list>"""
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         response = get(
             prs_url.format(workspace=workspace, slug=slug), {"state": state}
         )
@@ -196,7 +212,7 @@ def diff(
         id=id,
     )
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         diff = get_text(url)
         syntax = Syntax(
             diff, "diff", theme=config.THEME, background_color=config.BG_COLOR
@@ -211,11 +227,9 @@ def checkout(
     slug: str = get_slug(),
 ):
     """Checkout PR by ID"""
-    url = pr_url.format(
-        workspace=workspace, slug=slug, id=id
-    )
+    url = pr_url.format(workspace=workspace, slug=slug, id=id)
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = get(url)
     branch_name = resp["source"]["branch"]["name"]
     run_cmd(["git", "checkout", "-b", branch_name])
@@ -229,11 +243,9 @@ def approve(
     slug: str = get_slug(),
 ):
     """Approve PR by ID"""
-    url = approve_url.format(
-        workspace=workspace, slug=slug, id=id
-    )
+    url = approve_url.format(workspace=workspace, slug=slug, id=id)
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = post(url)
     handle_error(resp)
     print(resp["state"].title())
@@ -246,11 +258,9 @@ def decline(
     slug: str = get_slug(),
 ):
     """Decline PR by ID"""
-    url = decline_url.format(
-        workspace=workspace, slug=slug, id=id
-    )
+    url = decline_url.format(workspace=workspace, slug=slug, id=id)
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = post(url)
     handle_error(resp)
     print(resp["state"].title())
@@ -263,11 +273,9 @@ def request_changes(
     slug: str = get_slug(),
 ):
     """Request changes for PR by ID"""
-    url = request_changes_url.format(
-        workspace=workspace, slug=slug, id=id
-    )
+    url = request_changes_url.format(workspace=workspace, slug=slug, id=id)
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = post(url)
     handle_error(resp)
     print(resp["state"].title())
@@ -280,11 +288,9 @@ def comments(
     slug: str = get_slug(),
 ):
     """View comments for PR by ID"""
-    url = comments_url.format(
-        workspace=workspace, slug=slug, id=id
-    )
+    url = comments_url.format(workspace=workspace, slug=slug, id=id)
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = get(url)
         handle_error(resp)
 
@@ -296,7 +302,9 @@ def comments(
         to = comment["inline"]["to"] or ""
         line = f":{to}" if to else ""
         deleted = "(Deleted)" if comment["deleted"] else ""
-        console.print(f"[bold]{user}[/bold] {path}{line} [dim]{updated}[/dim] {deleted}")
+        console.print(
+            f"[bold]{user}[/bold] {path}{line} [dim]{updated}[/dim] {deleted}"
+        )
         markdown = comment["content"]["raw"]
         console.print(Padding(Markdown(markdown, code_theme=config.THEME), 1))
 
@@ -308,11 +316,9 @@ def commits(
     slug: str = get_slug(),
 ):
     """View commits of PR by ID"""
-    url = commits_url.format(
-        workspace=workspace, slug=slug, id=id
-    )
+    url = commits_url.format(workspace=workspace, slug=slug, id=id)
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = get(url)
         handle_error(resp)
 
