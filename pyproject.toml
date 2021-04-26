@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bb-cli"
-version = "0.4.0"
+version = "0.5.0"
 description = "Bitbucket's command line tool"
 authors = ["Paul Nameless <reacsdas@gmail.com>"]
 license = "Unlicense"
