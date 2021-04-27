@@ -49,6 +49,7 @@ def list(
     workspace: str = get_workspace(),
     slug: str = get_slug(),
     state: State = State.OPEN,
+    extra: bool = True
 ):
     """List all PRs"""
     console = Console()
@@ -56,7 +57,7 @@ def list(
         response = get(
             prs_url.format(workspace=workspace, slug=slug), {"state": state}
         )
-        table = generate_prs_table(response["values"])
+        table = generate_prs_table(response["values"], extra=extra)
     console.print(table)
 
 
@@ -67,12 +68,12 @@ def generate_prs_table(prs: List[dict], extra: bool = False) -> Table:
         "Id",
         "Title",
         "Branch",
-        "Created",
+        # "Created",
         "Updated",
         "Author",
     ]
     if extra:
-        columns.extend(["Build", "Approved"])
+        columns.extend(["Reviewers", "Build", "Approved"])
     for column in columns:
         no_wrap = True
         overflow = "fold"
@@ -88,7 +89,6 @@ def generate_prs_table(prs: List[dict], extra: bool = False) -> Table:
         )
 
     for pr in prs:
-        created = parse_dt(pr["created_on"])
         updated = parse_dt(pr["updated_on"])
         branch = f'{pr["source"]["branch"]["name"]}->{pr["destination"]["branch"]["name"]}'
 
@@ -97,7 +97,6 @@ def generate_prs_table(prs: List[dict], extra: bool = False) -> Table:
             str(pr["id"]),
             title,
             branch,
-            created,
             updated,
             pr["author"]["display_name"],
         ]
@@ -112,29 +111,31 @@ def generate_prs_table(prs: List[dict], extra: bool = False) -> Table:
                 )
             )
 
-            approve_resp = get(pr["links"]["self"]["href"])
+            pr_info = get(pr["links"]["self"]["href"])
             approve = ",".join(
                 (
                     it["user"]["display_name"]
-                    for it in approve_resp["participants"]
+                    for it in pr_info["participants"]
                     if it["approved"]
                 )
             )
-            approve = f"[green]{approve}"
+            approve = f"[green]{approve}[/green]"
 
-            row.extend([build_status, approve])
+            reviewers = ",".join(it["display_name"] for it in pr_info["reviewers"])
+
+            row.extend([reviewers, build_status, approve])
         table.add_row(*row)
     return table
 
 
 @app.command()
 def create(
+    reviewers: List[str] = [],
     workspace: str = get_workspace(),
     slug: str = get_slug(),
     title: str = get_last_commit_msg(),
     src_branch: str = get_current_branch(),
     dst_branch: str = None,
-    reviewers: List[str] = [],
     body: str = None,
     close: bool = True,
 ):
@@ -147,7 +148,7 @@ def create(
     if dst_branch:
         data["destination"] = {"branch": {"name": dst_branch}}
     if reviewers:
-        data["reviewers"] = [{"username": r} for r in reviewers]
+        data["reviewers"] = [{"uuid": r} for r in reviewers]
     if body:
         data["description"] = body
 
@@ -180,23 +181,6 @@ def merge(
         src_branch = resp["source"]["branch"]["name"]
         run_cmd(["git", "branch", "-D", src_branch])
 
-
-@app.command()
-def status(
-    workspace: str = get_workspace(),
-    slug: str = get_slug(),
-    state: State = State.OPEN,
-):
-    """Shows more detailed information about PRs (Build, Approved)
-    but slower than <bb pr list>"""
-    console = Console()
-    with console.status("[bold green]Loading..."):
-        response = get(
-            prs_url.format(workspace=workspace, slug=slug), {"state": state}
-        )
-        # TODO: show number of comments
-        table = generate_prs_table(response["values"], extra=True)
-    console.print(table)
 
 
 @app.command()
