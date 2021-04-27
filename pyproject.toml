@@ -5,6 +5,9 @@ description = "Bitbucket's command line tool"
 authors = ["Paul Nameless <reacsdas@gmail.com>"]
 license = "Unlicense"
 packages = [{ include = "bb"}]
+readme = "readme.md"
+homepage = "https://github.com/paul-nameless/bb"
+repository = "https://github.com/paul-nameless/bb"
 
 [tool.poetry.dependencies]
 python = "^3.9"
